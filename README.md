@@ -19,10 +19,15 @@ Install sqlmodel
 pip install sqlmodel
 ```
 
+Save requirements
+```
+pip freeze > requirements.txt
+```
+
 
 ## start application
 Run `fastapi dev main.py`
 
-Application is running at: http://0.0.0.0:3030/
+Application is running at: http://127.0.0.1:8000/
 
-OpenAPI is accessible at http://0.0.0.0:3030/docs
+OpenAPI is accessible at http://127.0.0.1:8000/docs
