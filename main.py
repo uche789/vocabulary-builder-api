@@ -1,4 +1,6 @@
 import json
+import os
+from dotenv import load_dotenv
 from typing import Annotated, List
 from fastapi import Depends, FastAPI, File, HTTPException, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,6 +10,7 @@ from sqlalchemy.orm import Session
 from models.repositiory import Repository, Vocab, VocabPublic, convert_to_vocab, convert_plain_to_vocab
 from contextlib import asynccontextmanager
 
+load_dotenv()
 repo = Repository()
 
 # https://fastapi.tiangolo.com/advanced/events/#lifespan
@@ -21,10 +24,16 @@ async def lifespan(app: FastAPI):
 SessionDep = Annotated[Session, Depends(repo.get_session)]
 app = FastAPI(lifespan=lifespan)
 
-origins = [
-    "http://localhost",
-    "http://localhost:5273",
-]
+origins = []
+if os.environ.get('FLASK_ENV') == 'development':
+    origins = [
+        "http://localhost",
+        "http://localhost:5273",
+    ]
+else:
+    origins = [
+        "https://simplearchitect.dev"
+    ]
 
 app.add_middleware(
     CORSMiddleware,

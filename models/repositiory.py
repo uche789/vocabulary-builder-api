@@ -1,3 +1,4 @@
+import os
 from typing import List
 
 from sqlalchemy import create_engine, JSON, CheckConstraint, String, Integer
@@ -68,11 +69,12 @@ def convert_plain_to_vocab(vocab_instance):
 
 class Repository:
     def __init__(self):
-        sqlite_file_name = "database.db"
-        sqlite_url = f"sqlite:///{sqlite_file_name}"
+        # sqlite_file_name = "database.db"
+        # sqlite_url = f"sqlite:///{sqlite_file_name}"
 
-        connect_args = {"check_same_thread": False}
-        self.engine = create_engine(sqlite_url, connect_args=connect_args)
+        # connect_args = {"check_same_thread": False}
+        # self.engine = create_engine(sqlite_url, connect_args=connect_args)
+        self.engine = create_engine(os.environ.get('DATABASE_URL'))
 
     def create_db_and_tables(self):
         Base.metadata.create_all(self.engine)
