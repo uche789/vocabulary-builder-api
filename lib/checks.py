@@ -1,8 +1,6 @@
 import os
-import bcrypt
-from typing import Annotated
 from fastapi.security import APIKeyHeader, OAuth2PasswordBearer
-from fastapi import Depends, HTTPException, Security, status
+from fastapi import HTTPException, Security, status
 
 api_key_header = APIKeyHeader(name="X-API-Key")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
