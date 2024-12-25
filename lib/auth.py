@@ -6,7 +6,6 @@ import jwt
 
 SECRET_KEY = os.getenv('SECRET_KEY')
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 # def get_hash_password(password: str):
 #     pwd_bytes = password.encode('utf-8')
@@ -31,7 +30,10 @@ def authenticate_user(username: str, password: str):
 
 def generate_access_token(username: str):
     to_encode = {'sub': username}
-    expire = datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=12)
+    expiry_minutes = 720
+    if os.getenv('FLASK_ENV') == 'development':
+        expiry_minutes = 15
+    expire = datetime.now(timezone.utc) + timedelta(minutes=expiry_minutes)
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt

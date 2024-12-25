@@ -60,6 +60,10 @@ async def login(response: Response, form_data: Annotated[OAuth2PasswordRequestFo
     response.set_cookie('access_token', token, httponly=True, secure=True, samesite='Strict')
     return
 
+@app.get('/auth', dependencies=[Depends(verify_access)])
+async def auth():
+    return
+
 @app.get('/vocabulary/', dependencies=[Depends(check_api_key)])
 @limiter.limit("500/minute")
 async def get_vocab(request: Request, session: SessionDep, lang: str, query = ''):
