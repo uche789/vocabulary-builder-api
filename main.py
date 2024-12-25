@@ -2,13 +2,18 @@ import json
 import os
 from dotenv import load_dotenv
 from typing import Annotated, List
-from fastapi import Depends, FastAPI, File, HTTPException, Response, UploadFile
+from fastapi import Depends, FastAPI, File, HTTPException, Response, UploadFile, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 from models.repositiory import Repository, Vocab, VocabPublic, convert_to_vocab, convert_plain_to_vocab
 from contextlib import asynccontextmanager
+from lib.checks import check_dev_environment, check_api_key, check_valid_language
+from lib.auth import generate_access_token, authenticate_user, verify_access
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from slowapi.errors import RateLimitExceeded
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.util import get_remote_address
 
 load_dotenv()
 repo = Repository()
@@ -22,7 +27,12 @@ async def lifespan(app: FastAPI):
     # Clean up (optional)
 
 SessionDep = Annotated[Session, Depends(repo.get_session)]
+limiter = Limiter(key_func=get_remote_address)
 app = FastAPI(lifespan=lifespan)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 origins = []
 if os.environ.get('FLASK_ENV') == 'development':
@@ -43,12 +53,16 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-def check_valid_language(lang: str) -> bool: 
-    if lang.lower() not in ['de', 'fr', 'jp']:
-        raise HTTPException(status_code=400, detail='Invalid language')
+@app.post('/token')
+async def login(response: Response, form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
+    authenticate_user(password=form_data.password, username=form_data.username)
+    token = generate_access_token(form_data.username)
+    response.set_cookie('access_token', token, httponly=True, secure=True, samesite='Strict')
+    return {"access_token": token, "token_type": "bearer"}
 
-@app.get('/vocabulary/')
-async def get_vocab(session: SessionDep, lang: str, query = ''):
+@app.get('/vocabulary/', dependencies=[Depends(check_api_key)])
+@limiter.limit("5/minute")
+async def get_vocab(request: Request, session: SessionDep, lang: str, query = ''):
     check_valid_language(lang)
     if query:
         result = session.query(Vocab).filter(Vocab.language == lang).filter((Vocab.word).contains(query)).order_by(Vocab.word).all()
@@ -56,8 +70,17 @@ async def get_vocab(session: SessionDep, lang: str, query = ''):
         result = session.query(Vocab).filter(Vocab.language == lang).all()
     return result
 
+@app.get('/vocabulary/{vocab_id}', dependencies=[Depends(check_api_key)])
+@limiter.limit("5/minute")
+async def get_vocab_by_id(request: Request, vocab_id, session: SessionDep):
+    db_vocab = session.get(Vocab, vocab_id)
+    if not db_vocab:
+        raise HTTPException(status_code=404, detail='Not found')
+    return db_vocab
+
 @app.post('/vocabulary/file')
-async def add_vocab(file: UploadFile = File(...)):
+async def add_vocab(token: Annotated[str, Depends(oauth2_scheme)], file: UploadFile = File(...)):
+    verify_access(token=token)
     if file.content_type != 'application/json':
         raise HTTPException(status_code=400, detail='Invalid file type ' + file.content_type + '. Please add a JSON file')
     dataString = await file.read()
@@ -74,12 +97,13 @@ async def add_vocab(file: UploadFile = File(...)):
         session.commit()
         session.close()
     except Exception as e:
-        print(e)
         raise HTTPException(status_code=400, detail='Invalid file content')
     return
 
 @app.post('/vocabulary/')
-async def add_vocab(payload: VocabPublic, session: SessionDep):
+async def add_vocab(token: Annotated[str, Depends(oauth2_scheme)], payload: VocabPublic, session: SessionDep):
+    print(token)
+    verify_access(token=token)
     db_vocab =  convert_to_vocab(payload)
     session.add(db_vocab)
     session.commit()
@@ -87,7 +111,8 @@ async def add_vocab(payload: VocabPublic, session: SessionDep):
     return db_vocab
 
 @app.put('/vocabulary/{vocab_id}')
-async def put_vocab(vocab_id, payload: VocabPublic, session: SessionDep):
+async def put_vocab(token: Annotated[str, Depends(oauth2_scheme)], vocab_id, payload: VocabPublic, session: SessionDep):
+    verify_access(token=token)
     db_vocab = session.query(Vocab).filter(Vocab.vocab_id == vocab_id).first()
     if not db_vocab:
         raise HTTPException(status_code=404, detail='Invalid payload')
@@ -103,7 +128,8 @@ async def put_vocab(vocab_id, payload: VocabPublic, session: SessionDep):
     return db_vocab
 
 @app.delete('/vocabulary/{vocab_id}')
-async def delete_vocab(vocab_id, session: SessionDep) -> None:
+async def delete_vocab(token: Annotated[str, Depends(oauth2_scheme)], vocab_id, session: SessionDep) -> None:
+    verify_access(token=token)
     db_vocab = session.get(Vocab, vocab_id)
     if not db_vocab:
         return Response(status_code=204)
@@ -112,7 +138,9 @@ async def delete_vocab(vocab_id, session: SessionDep) -> None:
     return
 
 @app.get('/vocabulary/download')
-async def generate_vocab(lang: str, session: SessionDep):
+async def generate_vocab(token: Annotated[str, Depends(oauth2_scheme)], lang: str, session: SessionDep):
+    verify_access(token=token)
+    check_dev_environment()
     check_valid_language(lang)
     fileName = 'output/' + lang + '.json'
     rawList = session.query(Vocab).where(Vocab.language == lang).all()
@@ -133,10 +161,3 @@ async def generate_vocab(lang: str, session: SessionDep):
     with open(fileName, 'w', encoding='utf-8') as f:
         json.dump(list, f)
     return FileResponse(path=fileName, filename=fileName, media_type='application/json')
-
-@app.get('/vocabulary/{vocab_id}')
-async def get_vocab_by_id(vocab_id, session: SessionDep):
-    db_vocab = session.get(Vocab, vocab_id)
-    if not db_vocab:
-        raise HTTPException(status_code=404, detail='Not found')
-    return db_vocab
