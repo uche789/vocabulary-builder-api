@@ -57,11 +57,16 @@ app.add_middleware(
 async def login(response: Response, form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
     authenticate_user(password=form_data.password, username=form_data.username)
     token = generate_access_token(form_data.username)
-    response.set_cookie('access_token', token, httponly=True, secure=True, samesite='Strict')
+    response.set_cookie('access_token', token, httponly=True, secure=True, samesite='Strict', path='/')
     return
 
 @app.get('/auth', dependencies=[Depends(verify_access)])
 async def auth():
+    return
+
+@app.post('/logout')
+def logout(response: Response):
+    response.set_cookie("access_token", "", max_age=0)  # Delete access token
     return
 
 @app.get('/vocabulary/', dependencies=[Depends(check_api_key)])
@@ -69,14 +74,16 @@ async def auth():
 async def get_vocab(request: Request, session: SessionDep, lang: str, query = ''):
     check_valid_language(lang)
     if query:
-        result = session.query(Vocab).filter(Vocab.language == lang).filter((Vocab.word).contains(query)).order_by(Vocab.word).all()
+        if len(query) > 100 or not isinstance(query, str):  # Limit length
+            return []
+        result = session.query(Vocab).filter(Vocab.language == lang).filter((Vocab.word.ilike(f"%{query}%"))).order_by(Vocab.word).all()
     else:
         result = session.query(Vocab).filter(Vocab.language == lang).all()
     return result
 
 @app.get('/vocabulary/{vocab_id}', dependencies=[Depends(check_api_key)])
 @limiter.limit("500/minute")
-async def get_vocab_by_id(request: Request, vocab_id, session: SessionDep):
+async def get_vocab_by_id(request: Request, vocab_id: int, session: SessionDep):
     db_vocab = session.get(Vocab, vocab_id)
     if not db_vocab:
         raise HTTPException(status_code=404, detail='Not found')
