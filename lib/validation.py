@@ -1,0 +1,26 @@
+import bleach
+from typing import List
+from fastapi import HTTPException, Security, status
+
+def sanitize(aString) -> str:
+    return bleach.clean(aString, tags=[], attributes={}, protocols=[])
+
+def sanitize_all(stringList: List[str]):
+    for i, item in enumerate(stringList):
+        stringList[i] = sanitize(item)
+
+def validate_language(lang: str):
+    return lang in ['de', 'fr', 'jp']
+
+def validate_word_type(lang: str):
+    return lang in ['Noun', 'Verb', 'Adverb', 'Adjective']
+
+def validate_gender(lang: str):
+    return lang in ['f', 'm', 'n', 'p']
+
+def validate_levels(levels: List[str]) -> bool:
+    stored_levels = ["Beginner", "Upper Beginner", "Intermediary", "Upper Intermediary", "Advanced", "Fluent"]
+    for i, item in enumerate(levels):
+        if item not in stored_levels:
+            return False
+    return True

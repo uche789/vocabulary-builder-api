@@ -1,6 +1,7 @@
 annotated-types==0.7.0
 anyio==4.6.2.post1
 bcrypt==4.2.1
+bleach==6.2.0
 certifi==2024.8.30
 click==8.1.7
 Deprecated==1.2.15
@@ -38,5 +39,6 @@ typing_extensions==4.12.2
 uvicorn==0.32.0
 uvloop==0.21.0
 watchfiles==0.24.0
+webencodings==0.5.1
 websockets==13.1
 wrapt==1.17.0

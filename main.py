@@ -8,8 +8,8 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from models.repositiory import Repository, Vocab, VocabPublic, convert_to_vocab, convert_plain_to_vocab
 from contextlib import asynccontextmanager
-from lib.checks import check_dev_environment, check_api_key, check_valid_language
-from lib.auth import generate_access_token, authenticate_user, check_token, verify_access
+from lib.checks import check_dev_environment, check_valid_language
+from lib.auth import generate_access_token, authenticate_user, verify_access, validate_api_key
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from slowapi.errors import RateLimitExceeded
 from slowapi import Limiter, _rate_limit_exceeded_handler
@@ -69,7 +69,7 @@ def logout(response: Response):
     response.set_cookie("access_token", "", max_age=0)  # Delete access token
     return
 
-@app.get('/vocabulary/', dependencies=[Depends(check_api_key)])
+@app.get('/vocabulary/', dependencies=[Depends(validate_api_key)])
 @limiter.limit("500/minute")
 async def get_vocab(request: Request, session: SessionDep, lang: str, query = ''):
     check_valid_language(lang)
@@ -81,13 +81,22 @@ async def get_vocab(request: Request, session: SessionDep, lang: str, query = ''
         result = session.query(Vocab).filter(Vocab.language == lang).all()
     return result
 
-@app.get('/vocabulary/{vocab_id}', dependencies=[Depends(check_api_key)])
+@app.get('/vocabulary/{vocab_id}', dependencies=[Depends(validate_api_key)])
 @limiter.limit("500/minute")
 async def get_vocab_by_id(request: Request, vocab_id: int, session: SessionDep):
     db_vocab = session.get(Vocab, vocab_id)
     if not db_vocab:
         raise HTTPException(status_code=404, detail='Not found')
     return db_vocab
+
+@app.get('/vocabulary/slug/{slug}', dependencies=[Depends(validate_api_key)])
+@limiter.limit("500/minute")
+async def get_vocab_by_slug(request: Request, slug: str, lang: str, session: SessionDep):
+    result = session.query(Vocab).filter(Vocab.language == lang).filter(Vocab.word == slug) .order_by(Vocab.word).first()
+    if not result:
+        raise HTTPException(status_code=404, detail='Not found')
+    return result
+
 
 @app.post('/vocabulary/file', dependencies=[Depends(verify_access)])
 async def add_vocab(file: UploadFile = File(...)):

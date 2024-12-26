@@ -1,8 +1,12 @@
 from datetime import datetime, timedelta, timezone
 import os
 import bcrypt
-from fastapi import HTTPException, Request, status
+from fastapi import HTTPException, Request, Security, status
+from fastapi.security import APIKeyHeader, OAuth2PasswordBearer
 import jwt
+
+api_key_header = APIKeyHeader(name="X-API-Key")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 
 SECRET_KEY = os.getenv('SECRET_KEY')
 ALGORITHM = "HS256"
@@ -60,3 +64,8 @@ def check_token(token: str):
             raise credentials_exception
     except jwt.InvalidTokenError:
         raise credentials_exception
+    
+def validate_api_key(api_key_header: str = Security(api_key_header)):
+    stored_api_key = os.getenv('X_API_KEY')
+    if stored_api_key != api_key_header:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid API Key")

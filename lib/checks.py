@@ -1,14 +1,5 @@
 import os
-from fastapi.security import APIKeyHeader, OAuth2PasswordBearer
 from fastapi import HTTPException, Security, status
-
-api_key_header = APIKeyHeader(name="X-API-Key")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-
-def check_api_key(api_key_header: str = Security(api_key_header)):
-    stored_api_key = os.getenv('X_API_KEY')
-    if stored_api_key != api_key_header:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid API Key")
     
 def check_dev_environment():
     env = os.environ.get('FLASK_ENV')

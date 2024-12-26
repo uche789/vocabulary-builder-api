@@ -1,9 +1,11 @@
 import os
 from typing import List
 
+from fastapi import HTTPException
 from sqlalchemy import create_engine, JSON, CheckConstraint, String, Integer
 from sqlalchemy.orm import Mapped, mapped_column, DeclarativeBase, sessionmaker
 from pydantic import BaseModel
+from lib.validation import sanitize_all, sanitize, validate_gender, validate_language, validate_levels, validate_word_type
 
 class Base(DeclarativeBase):
     pass
@@ -44,11 +46,19 @@ class VocabPublic(BaseModel):
 
 # Function to convert ExampleTablePublic to ExampleTable
 def convert_to_vocab(vocab_instance: VocabPublic):
+    if not all([
+        validate_word_type(vocab_instance.word_type),
+        validate_language(vocab_instance.language),
+        validate_levels(vocab_instance.levels),
+        validate_gender(vocab_instance.gender),
+    ]):
+        raise HTTPException(status_code=400, detail='Invalid arguments')
+    
     return Vocab(
-        word=vocab_instance.word,
-        english_translation=vocab_instance.english_translation,
-        definition=vocab_instance.definition,
-        examples=vocab_instance.examples,
+        word=sanitize(vocab_instance.word),
+        english_translation=sanitize(vocab_instance.english_translation),
+        definition=sanitize_all(vocab_instance.definition),
+        examples=sanitize_all(vocab_instance.examples),
         language=vocab_instance.language,
         word_type=vocab_instance.word_type,
         gender=vocab_instance.gender,
@@ -56,11 +66,19 @@ def convert_to_vocab(vocab_instance: VocabPublic):
     )
 
 def convert_plain_to_vocab(vocab_instance):
+    if not all([
+        validate_word_type(vocab_instance['word_type']),
+        validate_language(vocab_instance['language']),
+        validate_levels(vocab_instance['levels']),
+        validate_gender(vocab_instance['gender']),
+    ]):
+        raise HTTPException(status_code=400, detail='Invalid arguments')
+    
     return Vocab(
-        word=vocab_instance['word'],
-        english_translation=vocab_instance['english_translation'],
-        definition=vocab_instance['definition'],
-        examples=vocab_instance['examples'],
+        word=sanitize(vocab_instance['word']),
+        english_translation=sanitize(vocab_instance['english_translation']),
+        definition=sanitize_all(vocab_instance['definition']),
+        examples=sanitize_all(vocab_instance['examples']),
         language=vocab_instance['language'],
         word_type=vocab_instance['word_type'],
         gender=vocab_instance['gender'],
