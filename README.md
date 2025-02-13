@@ -30,6 +30,12 @@ Application is running at: http://127.0.0.1:8000/
 
 OpenAPI is accessible at http://127.0.0.1:8000/docs
 
+## Migrations
+
+Migrations is done using albemic
+
+https://alembic.sqlalchemy.org/en/latest/autogenerate.html
+
 ## References
 - https://docs.sqlalchemy.org/en/20/dialects/postgresql.html#module-sqlalchemy.dialects.postgresql.psycopg2
 - https://stackoverflow.com/questions/59811370/how-to-use-psycopg2-binary-in-python

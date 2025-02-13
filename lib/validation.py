@@ -15,7 +15,9 @@ def validate_language(lang: str):
 def validate_word_type(lang: str):
     return lang in ['Noun', 'Verb', 'Adverb', 'Adjective']
 
-def validate_gender(lang: str):
+def validate_gender(lang: str | None):
+    if not lang:
+        return True
     return lang in ['f', 'm', 'n', 'p']
 
 def validate_levels(levels: List[str]) -> bool:

@@ -42,7 +42,7 @@ if os.environ.get('FLASK_ENV') == 'development':
     ]
 else:
     origins = [
-        "https://simplearchitect.dev"
+        os.environ.get('ALLOW_ORIGIN')
     ]
 
 app.add_middleware(
