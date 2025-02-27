@@ -44,6 +44,24 @@ class VocabPublic(BaseModel):
     gender: str | None
     levels: List[str] | None
 
+# class UsefulPhrase(Base):
+#     __tablename__ = 'useful_phrase'
+#     up_id = mapped_column(Integer, primary_key=True, autoincrement=True)
+#     description: Mapped[str]
+#     meaning: Mapped[str]
+#     language: Mapped[str]
+#     __table_args__ = (
+#         CheckConstraint(
+#             "language IN ('de', 'fr', 'jp')",
+#             name="language_format_check"
+#         ),
+#     )
+
+# class UsefulPhrasePublic(BaseModel):
+#     description: str
+#     meaning: str
+#     language: str
+
 # Function to convert ExampleTablePublic to ExampleTable
 def convert_to_vocab(vocab_instance: VocabPublic):
     if not all([

@@ -20,15 +20,20 @@ pip install "fastapi[standard]"
 
 # Save requirements
 pip freeze > requirements.txt
+
+## Run docker
+docker-compose up --build
+docker-compose down
+
+# docker production
+docker-compose -f docker-compose.yml up --build
 ```
 
 
-## start application
-Run `fastapi dev main.py`
+## Run application locally
+Command: `fastapi dev main.py`
 
-Application is running at: http://127.0.0.1:8000/
-
-OpenAPI is accessible at http://127.0.0.1:8000/docs
+Application should be running is running at http://127.0.0.1:8000/ and the OpenAPI docs is accessible at http://127.0.0.1:8000/docs.
 
 ## Migrations
 

@@ -54,6 +54,7 @@ app.add_middleware(
 )
 
 @app.post('/login')
+# @limiter.limit("50/minute")
 async def login(response: Response, form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
     authenticate_user(password=form_data.password, username=form_data.username)
     token = generate_access_token(form_data.username)
@@ -61,16 +62,18 @@ async def login(response: Response, form_data: Annotated[OAuth2PasswordRequestFo
     return
 
 @app.get('/auth', dependencies=[Depends(verify_access)])
-async def auth():
+@limiter.limit("200/minute")
+async def auth(request: Request):
     return
 
 @app.post('/logout')
-def logout(response: Response):
+@limiter.limit("50/minute")
+def logout(request: Request, response: Response):
     response.set_cookie("access_token", "", max_age=0)  # Delete access token
     return
 
 @app.get('/vocabulary/', dependencies=[Depends(validate_api_key)])
-@limiter.limit("500/minute")
+@limiter.limit("200/minute")
 async def get_vocab(request: Request, session: SessionDep, lang: str, query = ''):
     check_valid_language(lang)
     if query:
@@ -82,7 +85,7 @@ async def get_vocab(request: Request, session: SessionDep, lang: str, query = ''
     return result
 
 @app.get('/vocabulary/{vocab_id}', dependencies=[Depends(validate_api_key)])
-@limiter.limit("500/minute")
+@limiter.limit("200/minute")
 async def get_vocab_by_id(request: Request, vocab_id: int, session: SessionDep):
     db_vocab = session.get(Vocab, vocab_id)
     if not db_vocab:
@@ -90,7 +93,7 @@ async def get_vocab_by_id(request: Request, vocab_id: int, session: SessionDep):
     return db_vocab
 
 @app.get('/vocabulary/slug/{slug}', dependencies=[Depends(validate_api_key)])
-@limiter.limit("500/minute")
+@limiter.limit("200/minute")
 async def get_vocab_by_slug(request: Request, slug: str, lang: str, session: SessionDep):
     result = session.query(Vocab).filter(Vocab.language == lang).filter(Vocab.word == slug) .order_by(Vocab.word).first()
     if not result:
@@ -99,7 +102,8 @@ async def get_vocab_by_slug(request: Request, slug: str, lang: str, session: Ses
 
 
 @app.post('/vocabulary/file', dependencies=[Depends(verify_access)])
-async def add_vocab(file: UploadFile = File(...)):
+@limiter.limit("200/minute")
+async def add_vocab(request: Request, file: UploadFile = File(...)):
     if file.content_type != 'application/json':
         raise HTTPException(status_code=400, detail='Invalid file type ' + file.content_type + '. Please add a JSON file')
     dataString = await file.read()
@@ -120,7 +124,8 @@ async def add_vocab(file: UploadFile = File(...)):
     return
 
 @app.post('/vocabulary/', dependencies=[Depends(verify_access)])
-async def add_vocab(payload: VocabPublic, session: SessionDep):
+@limiter.limit("200/minute")
+async def add_vocab(request: Request, payload: VocabPublic, session: SessionDep):
     db_vocab =  convert_to_vocab(payload)
     session.add(db_vocab)
     session.commit()
@@ -128,7 +133,8 @@ async def add_vocab(payload: VocabPublic, session: SessionDep):
     return db_vocab
 
 @app.put('/vocabulary/{vocab_id}', dependencies=[Depends(verify_access)])
-async def put_vocab(vocab_id, payload: VocabPublic, session: SessionDep):
+@limiter.limit("200/minute")
+async def put_vocab(request: Request, vocab_id, payload: VocabPublic, session: SessionDep):
     db_vocab = session.query(Vocab).filter(Vocab.vocab_id == vocab_id).first()
     if not db_vocab:
         raise HTTPException(status_code=404, detail='Invalid payload')
@@ -144,7 +150,8 @@ async def put_vocab(vocab_id, payload: VocabPublic, session: SessionDep):
     return db_vocab
 
 @app.delete('/vocabulary/{vocab_id}', dependencies=[Depends(verify_access)])
-async def delete_vocab(vocab_id, session: SessionDep) -> None:
+@limiter.limit("100/minute")
+async def delete_vocab(request: Request, vocab_id, session: SessionDep) -> None:
     db_vocab = session.get(Vocab, vocab_id)
     if not db_vocab:
         return Response(status_code=204)
@@ -153,7 +160,8 @@ async def delete_vocab(vocab_id, session: SessionDep) -> None:
     return Response(status_code=200)
 
 @app.get('/vocabulary/download', dependencies=[Depends(verify_access)])
-async def generate_vocab(lang: str, session: SessionDep):
+@limiter.limit("50/minute")
+async def generate_vocab(request: Request, lang: str, session: SessionDep):
     check_dev_environment()
     check_valid_language(lang)
     fileName = 'output/' + lang + '.json'

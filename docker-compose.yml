@@ -1,0 +1,30 @@
+services:
+  main_app:
+    build:
+      context: .
+      dockerfile: dockerfile
+    deploy:
+      replicas: 3
+    command: ["fastapi", "run", "app/main.py", "--port", "80"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      X_API_KEY: ${X_API_KEY}
+      SECRET_KEY: ${SECRET_KEY}
+      USER_NAME: ${USER_NAME}
+      USER_PASSWORD: ${USER_PASSWORD}
+      ALLOW_ORIGIN: ${ALLOW_ORIGIN}
+    ports:
+      - 80:80
+  # nginx:
+  #   image: nginx:latest
+  #   container_name: nginx
+  #   ports:
+  #     - "80:80"  # Expose Nginx to the host on port 80
+  #   depends_on:
+  #     - main_app  # Ensure Node.js starts before Nginx
+  #   networks:
+  #     - loadbalancing # Creates a custom network
+
+  # networks:
+  #   loadbalancing:
+  #     driver: bridge

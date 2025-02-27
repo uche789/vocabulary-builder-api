@@ -1,0 +1,11 @@
+services:
+  main_app:
+    deploy:
+      replicas: 1
+    env_file:
+      - .env
+    command: ["fastapi", "dev", "app/main.py", "--host", "0.0.0.0"]
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${DATABASE_USER}:${DATABASE_PASS}@host.docker.internal:5432/vocab_db
+    ports:
+      - 8000:8000
