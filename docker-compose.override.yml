@@ -6,6 +6,21 @@ services:
       - .env
     command: ["fastapi", "dev", "app/main.py", "--host", "0.0.0.0"]
     environment:
-      DATABASE_URL: postgresql+psycopg2://${DATABASE_USER}:${DATABASE_PASS}@host.docker.internal:5432/vocab_db
+      # DATABASE_URL: postgresql+psycopg2://${DATABASE_USER}:${DATABASE_PASS}@host.docker.internal:5432/vocab_db
+      DATABASE_USER: postgreslive
+      DATABASE_PASS: postgreslive
+      DATABASE_URL: postgresql+psycopg2://postgreslive:postgreslive@db:5432/vocab_db
     ports:
       - 8000:8000
+    depends_on: 
+      db:
+        condition: service_healthy
+  
+  db:
+    environment:
+      POSTGRES_USER: postgreslive
+      POSTGRES_PASSWORD: postgreslive
+    ports:
+      - 5132:5432
+    # command: ["echo", "Service db disabled"]
+    # restart: "no"

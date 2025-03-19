@@ -54,8 +54,8 @@ app.add_middleware(
 )
 
 @app.post('/login')
-# @limiter.limit("50/minute")
-async def login(response: Response, form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
+@limiter.limit("50/minute")
+async def login(request: Request, response: Response, form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
     authenticate_user(password=form_data.password, username=form_data.username)
     token = generate_access_token(form_data.username)
     response.set_cookie('access_token', token, httponly=True, secure=True, samesite='Strict', path='/')

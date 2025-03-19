@@ -44,23 +44,6 @@ class VocabPublic(BaseModel):
     gender: str | None
     levels: List[str] | None
 
-# class UsefulPhrase(Base):
-#     __tablename__ = 'useful_phrase'
-#     up_id = mapped_column(Integer, primary_key=True, autoincrement=True)
-#     description: Mapped[str]
-#     meaning: Mapped[str]
-#     language: Mapped[str]
-#     __table_args__ = (
-#         CheckConstraint(
-#             "language IN ('de', 'fr', 'jp')",
-#             name="language_format_check"
-#         ),
-#     )
-
-# class UsefulPhrasePublic(BaseModel):
-#     description: str
-#     meaning: str
-#     language: str
 
 # Function to convert ExampleTablePublic to ExampleTable
 def convert_to_vocab(vocab_instance: VocabPublic):
@@ -110,6 +93,7 @@ class Repository:
 
         # connect_args = {"check_same_thread": False}
         # self.engine = create_engine(sqlite_url, connect_args=connect_args)
+        print(os.environ.get('DATABASE_USER'), os.environ.get('DATABASE_URL'))
         self.engine = create_engine(os.environ.get('DATABASE_URL'))
 
     def create_db_and_tables(self):

@@ -21,8 +21,13 @@ pip install "fastapi[standard]"
 # Save requirements
 pip freeze > requirements.txt
 
-## Run docker
+## build docker container
 docker-compose up --build
+
+## remove docker container and volumes
+docker-compose down -v
+
+## remove docker container
 docker-compose down
 
 # docker production
