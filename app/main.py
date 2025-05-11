@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 from dotenv import load_dotenv
 from typing import Annotated, List
@@ -14,6 +15,15 @@ from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from slowapi.errors import RateLimitExceeded
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
+
+logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        handlers=[
+            logging.FileHandler("app.log") # Log to file
+        ]
+    )
+logger = logging.getLogger('tomostudy.logger')
 
 load_dotenv()
 repo = Repository()
@@ -58,7 +68,8 @@ app.add_middleware(
 async def login(request: Request, response: Response, form_data: Annotated[OAuth2PasswordRequestForm, Depends()]):
     authenticate_user(password=form_data.password, username=form_data.username)
     token = generate_access_token(form_data.username)
-    response.set_cookie('access_token', token, httponly=True, secure=True, samesite='Strict', path='/')
+    # response.set_cookie('access_token', token, httponly=True, secure=True, samesite='Strict', path='/')
+    response.set_cookie('access_token', token, httponly=True, samesite='Strict', path='/')
     return
 
 @app.get('/auth', dependencies=[Depends(verify_access)])
@@ -120,7 +131,8 @@ async def add_vocab(request: Request, file: UploadFile = File(...)):
         session.commit()
         session.close()
     except Exception as e:
-        raise HTTPException(status_code=400, detail='Invalid file content')
+        logger.error(f"Failed to upload file content: {e}")
+        raise HTTPException(status_code=400, detail='Failed to upload file content')
     return
 
 @app.post('/vocabulary/', dependencies=[Depends(verify_access)])
@@ -140,7 +152,7 @@ async def put_vocab(request: Request, vocab_id, payload: VocabPublic, session: S
         raise HTTPException(status_code=404, detail='Invalid payload')
     db_vocab.definition = payload.definition
     db_vocab.examples = payload.examples
-    db_vocab.gender = payload.gender
+    db_vocab.article = payload.article
     db_vocab.word_type = payload.word_type
     db_vocab.word = payload.word
     db_vocab.english_translation = payload.english_translation
@@ -176,7 +188,7 @@ async def generate_vocab(request: Request, lang: str, session: SessionDep):
             'word_type': item.word_type,
             'definition': item.definition,
             'examples': item.examples,
-            'gender': item.gender,
+            'article': item.article,
             'levels': item.levels
         })
 

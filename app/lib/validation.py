@@ -1,11 +1,12 @@
 import bleach
 from typing import List
-from fastapi import HTTPException, Security, status
 
 def sanitize(aString) -> str:
     return bleach.clean(aString, tags=[], attributes={}, protocols=[])
 
-def sanitize_all(stringList: List[str]):
+def sanitize_all(stringList: List[str] | None):
+    if not stringList:
+        return None
     for i, item in enumerate(stringList):
         stringList[i] = sanitize(item)
 
@@ -15,7 +16,7 @@ def validate_language(lang: str):
 def validate_word_type(lang: str):
     return lang in ['Noun', 'Verb', 'Adverb', 'Adjective']
 
-def validate_gender(lang: str | None):
+def validate_article(lang: str | None):
     if not lang:
         return True
     return lang in ['f', 'm', 'n', 'p']
