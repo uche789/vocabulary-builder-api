@@ -1,11 +1,12 @@
 services:
   main_app:
+    container_name: main_app
     build:
       context: .
       dockerfile: dockerfile
     deploy:
       replicas: 1
-    command: ["fastapi", "run", "app/main.py", "--port", "80"]
+    command: ["fastapi", "run", "app/main.py", "--port", "80", "--proxy-headers"]
     environment:
       FLASK_ENV: ${FLASK_ENV}
       # DATABASE_URL: postgresql+psycopg2://${DATABASE_USER}:${DATABASE_PASS}@host.docker.internal:5432/vocab_db
@@ -14,8 +15,8 @@ services:
       USER_NAME: ${USER_NAME}
       USER_PASSWORD: ${USER_PASSWORD}
       ALLOW_ORIGIN: ${ALLOW_ORIGIN}
-    ports:
-      - 80:80
+    # ports:
+    #   - 80:80
     depends_on:
       db:
         condition: service_healthy
@@ -37,19 +38,15 @@ services:
       - pgdata:/var/lib/postgresql/data
     ports:
       - 5432:5432
-  # nginx:
-  #   image: nginx:latest
-  #   container_name: nginx
-  #   ports:
-  #     - "80:80"  # Expose Nginx to the host on port 80
-  #   depends_on:
-  #     - main_app  # Ensure Node.js starts before Nginx
-  #   networks:
-  #     - loadbalancing # Creates a custom network
-
-  # networks:
-  #   loadbalancing:
-  #     driver: bridge
+  nginx:
+    image: nginx:latest
+    container_name: nginx
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    ports:
+      - "8001:80"  # Expose Nginx to the host on port 80
+    depends_on:
+      - main_app  # Ensure Node.js starts before Nginx
 
 volumes:
   pgdata:
